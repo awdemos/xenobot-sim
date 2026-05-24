@@ -1,0 +1,16 @@
+/target
+**/*.rs.bk
+Cargo.lock
+*.vtk
+*.csv
+*.log
+result.json
+improved_result.json
+evolution_result.json
+test_experiment.json
+fluid_experiment.json
+fluid_optimized.json
+fluid_quick.json
+fluid_short.json
+evolution_log.txt
+evolution_improved.log

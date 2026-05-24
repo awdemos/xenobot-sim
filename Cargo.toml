@@ -1,0 +1,24 @@
+[package]
+name = "xenobot-sim"
+version = "0.1.0"
+edition = "2021"
+authors = ["Xenobot Research Team"]
+description = "Xenobot simulation engine for synthetic biology experiments"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+oxiphysics-core = { path = "/tmp/oxiphysics/crates/oxiphysics-core" }
+oxiphysics-softbody = { path = "/tmp/oxiphysics/crates/oxiphysics-softbody" }
+oxiphysics-geometry = { path = "/tmp/oxiphysics/crates/oxiphysics-geometry" }
+oxiphysics-lbm = { path = "/tmp/oxiphysics/crates/oxiphysics-lbm" }
+oxiphysics-io = { path = "/tmp/oxiphysics/crates/oxiphysics-io" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rayon = "1.8"
+thiserror = "1.0"
+rand = "0.8"
+clap = { version = "4.4", features = ["derive"] }
+nalgebra = "0.34.2"
+
+[dev-dependencies]
+tempfile = "3.8"
