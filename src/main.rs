@@ -87,11 +87,18 @@ fn create_example_body() -> XenobotBody {
 
 fn main() {
     let cli = Cli::parse();
+    if let Err(e) = run_command(cli) {
+        eprintln!("xenobot-sim failed: {}", e);
+        std::process::exit(1);
+    }
+}
+
+fn run_command(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     match cli.command {
         Commands::Run { config, output, vtk, csv } => {
             let experiment: Experiment = serde_json::from_str(
-                &fs::read_to_string(&config).expect("Failed to read config")
-            ).expect("Failed to parse config");
+                &fs::read_to_string(&config).map_err(|e| format!("failed to read config {}: {}", config, e))?
+            ).map_err(|e| format!("failed to parse config {}: {}", config, e))?;
             println!("Running experiment: {}", experiment.config.name);
             println!("Body: {} ({} voxels)", experiment.body.name, experiment.body.morphology.occupied_count());
             println!("Duration: {}s, dt: {}s", experiment.config.duration, experiment.config.dt);
@@ -113,32 +120,32 @@ fn main() {
                     collision_compliance: experiment.config.collision_compliance,
                 };
                 let state = run_simulation(&experiment.body.morphology, &sim_config, experiment.config.duration);
-                export_vtk(&state, &vtk_path).expect("Failed to write VTK");
+                export_vtk(&state, &vtk_path).map_err(|e| format!("failed to write VTK {}: {}", vtk_path, e))?;
                 println!("VTK exported to {}", vtk_path);
             }
             if let Some(csv_path) = csv {
                 let trajectory: Vec<(f64, Vec3)> = result.trajectory.iter()
                     .map(|t| (t.time, Vec3::new(t.center_of_mass[0], t.center_of_mass[1], t.center_of_mass[2])))
                     .collect();
-                export_csv_trajectory(&trajectory, &csv_path).expect("Failed to write CSV");
+                export_csv_trajectory(&trajectory, &csv_path).map_err(|e| format!("failed to write CSV {}: {}", csv_path, e))?;
                 println!("CSV exported to {}", csv_path);
             }
-            fs::write(&output, serde_json::to_string_pretty(&result).unwrap())
-                .expect("Failed to write output");
+            fs::write(&output, serde_json::to_string_pretty(&result)?)
+                .map_err(|e| format!("failed to write output {}: {}", output, e))?;
             println!("Result saved to {}", output);
         }
         Commands::Batch { configs, output } => {
             let experiments: Vec<Experiment> = configs.iter().map(|path| {
-                serde_json::from_str(&fs::read_to_string(path).expect("Failed to read config"))
-                    .expect("Failed to parse config")
-            }).collect();
+                let content = fs::read_to_string(path).map_err(|e| format!("failed to read config {}: {}", path, e))?;
+                serde_json::from_str(&content).map_err(|e| format!("failed to parse config {}: {}", path, e))
+            }).collect::<Result<Vec<_>, _>>()?;
             println!("Running batch of {} experiments...", experiments.len());
             let results = run_batch_parallel(&experiments);
             for (i, result) in results.iter().enumerate() {
                 println!("  [{}] {}: fitness = {:.6}", i, result.experiment_name, result.fitness);
             }
-            fs::write(&output, serde_json::to_string_pretty(&results).unwrap())
-                .expect("Failed to write output");
+            fs::write(&output, serde_json::to_string_pretty(&results)?)
+                .map_err(|e| format!("failed to write output {}: {}", output, e))?;
             println!("Results saved to {}", output);
         }
         Commands::Evolve { generations, population, output, fluid } => {
@@ -162,8 +169,8 @@ fn main() {
             }
             if let Some(best) = gens.last() {
                 if let Some(best_ind) = best.individuals.first() {
-                    fs::write(&output, serde_json::to_string_pretty(&best_ind.body).unwrap())
-                        .expect("Failed to write output");
+                    fs::write(&output, serde_json::to_string_pretty(&best_ind.body)?)
+                        .map_err(|e| format!("failed to write output {}: {}", output, e))?;
                     println!("Best body saved to {}", output);
                 }
             }
@@ -173,8 +180,8 @@ fn main() {
             let experiment = Experiment::new("example", body)
                 .with_duration(5.0)
                 .with_fitness(FitnessMetric::DistanceTraveled);
-            fs::write(&output, serde_json::to_string_pretty(&experiment).unwrap())
-                .expect("Failed to write example");
+            fs::write(&output, serde_json::to_string_pretty(&experiment)?)
+                .map_err(|e| format!("failed to write example {}: {}", output, e))?;
             println!("Example experiment saved to {}", output);
         }
         Commands::Validate { target, duration, collision, vtk_dir } => {
@@ -226,4 +233,5 @@ fn main() {
             }
         }
     }
+    Ok(())
 }
