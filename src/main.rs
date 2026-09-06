@@ -259,11 +259,11 @@ fn run_command(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
                     validation::validation_bilateral(),
                 ],
                 _ => {
-                    eprintln!(
+                    return Err(format!(
                         "Unknown target: {}. Use: v1, v2, beam, sphere, bilateral, all",
                         target
-                    );
-                    std::process::exit(1);
+                    )
+                    .into());
                 }
             };
             let sim_config = SimulatorConfig {
